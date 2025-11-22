@@ -520,7 +520,7 @@ function PART:DecideTarget()
 							chosen_ent = ent_candidate
 							table.insert(ents_candidates, ent_candidate)
 						end
-					elseif self.PhysicsProps and (physics_point_ent_classes[ent_candidate:GetClass()] or string.find(ent_candidate:GetClass(),"item_") or string.find(ent_candidate:GetClass(),"ammo_")) then
+					elseif self.PhysicsProps and (ent_candidate ~= self:GetRootPart():GetOwner()) and (physics_point_ent_classes[ent_candidate:GetClass()] or string.find(ent_candidate:GetClass(),"item_") or string.find(ent_candidate:GetClass(),"ammo_")) then
 						chosen_ent = ent_candidate
 						table.insert(ents_candidates, ent_candidate)
 					elseif self.NPC and (ent_candidate:IsNPC() or ent_candidate:IsNextBot() or ent_candidate.IsDrGEntity or ent_candidate.IsVJBaseSNPC) then
