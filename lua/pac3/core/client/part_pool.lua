@@ -645,6 +645,7 @@ function pac.EnablePartsByClass(classname, enable)
 	end
 end
 
+local known_special_link_parts = {}
 function pac.LinkSpecialTrackedPartsForEvent(part, ply)
 	part.erroring_cached_parts = {}
 	part.found_cached_parts = {}
@@ -654,10 +655,26 @@ function pac.LinkSpecialTrackedPartsForEvent(part, ply)
 		["damage_zone"] = true,
 		["lock"] = true
 	}
+	known_special_link_parts[ply] = known_special_link_parts[ply] or {}
+	known_special_link_parts[ply][part] = part.specialtrackedparts
 	for _,part2 in pairs(all_parts) do
 		if ply == part2:GetPlayerOwner() and tracked_classes[part2.ClassName] then
 			table.insert(part.specialtrackedparts,part2)
 		end
+	end
+	known_special_link_parts[ply][part] = part.specialtrackedparts
+end
+function pac.InsertSpecialTrackedPart(ply, append_part, remove)
+	if append_part then
+		if known_special_link_parts[ply] then
+			for part,tbl in pairs(known_special_link_parts[ply]) do
+				if remove then table.RemoveByValue(part.specialtrackedparts, append_part) continue end
+				if part:IsValid() then
+					table.insert(part.specialtrackedparts, append_part)
+				end
+			end
+		end
+		return
 	end
 end
 
@@ -676,7 +693,7 @@ function pac.UpdateButtonEvents(ply, key, down)
 	local button_events = ply.pac_part_cache_button_events or {}
 	for _,part in pairs(button_events) do
 		if part:GetProperty("ignore_if_hidden") then
-			if part:IsHidden() then continue end
+			if part:IsHidden() or (CurTime() - part.showtime) < 0.05 then continue end
 		end
 		if key ~= string.Split(part.Arguments, "@@")[1]:lower() then continue end
 		part.pac_broadcasted_buttons_holduntil = part.pac_broadcasted_buttons_holduntil or {}

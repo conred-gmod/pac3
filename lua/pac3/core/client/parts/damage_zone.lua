@@ -821,6 +821,7 @@ net.Receive("pac_hit_results", function(len)
 			local cs_ent = false
 			if not self.AttachPartsToTargetEntity then
 				ent = pac.CreateEntity("models/props_junk/popcan01a.mdl")
+				ent.is_pac_hitmarker = true
 				cs_ent = true
 				ent:SetNoDraw(true)
 				ent:SetPos(pos)
@@ -998,6 +999,8 @@ function PART:OnRemove()
 		pac.RemoveHook(v, "pace_draw_hitbox")
 	end
 	self:ClearHitMarkers()
+	--remove itself
+	pac.InsertSpecialTrackedPart(self:GetPlayerOwner(), self, true)
 end
 
 local previousRenderingHook
@@ -1295,6 +1298,7 @@ function PART:Initialize()
 		end
 	end)
 
+	pac.InsertSpecialTrackedPart(self:GetPlayerOwner(), self)
 end
 
 function PART:SetRadius(val)

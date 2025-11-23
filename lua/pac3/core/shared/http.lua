@@ -57,11 +57,12 @@ local function http(method, url, headers, cb, failcb)
 			else
 				pac.Message("_G.HTTP error: " .. err)
 			end
-		end
+		end,
+		timeout = 300
 	})
 end
 
-function pac.FixUrl(url)
+function pac.FixUrl(url, expectedContentType)
 	url = url:Trim()
 	url = url:gsub("[\"'<>\n\\]+", "")
 
@@ -74,14 +75,21 @@ function pac.FixUrl(url)
 		return url
 	end
 
-	if url:find("drive.google.com", 1, true) and not url:find("export=download", 1, true) then
+	if url:find("drive.google.com", 1, true) then
 		local id =
 			url:match("https://drive.google.com/file/d/(.-)/") or
 			url:match("https://drive.google.com/file/d/(.-)$") or
-			url:match("https://drive.google.com/open%?id=(.-)$")
+			url:match("https://drive.google.com/open%?id=(.-)$") or
+			url:match("https://drive.google.com/uc%?export=download&id=(.-)$") or
+			url:match("https://drive.google.com/uc%?id=(.-)&export=download$")
 
 		if id then
-			return "https://drive.google.com/uc?export=download&id=" .. id
+			if expectedContentType == "image" then
+				local thumbnailSize = math.Clamp( pac.urltex.TextureSize, 32, 4096 )
+				return "https://drive.google.com/thumbnail?id=" .. id .. "&sz=s" .. string.format("%.0f", thumbnailSize)
+			elseif not url:find("export=download", 1, true) then
+				return "https://drive.google.com/uc?export=download&id=" .. id
+			end
 		end
 		return url
 	end
@@ -105,6 +113,16 @@ function pac.getContentLength(url, cb, failcb)
 		for key, value in pairs(headers) do
 			if string.lower(key) == "content-length" then
 				length = tonumber(value)
+
+				--we started to get stuff like "7182199,0" from Google Drive, triggering the failstate because tonumber doesn't like varargs
+				if not length then
+					if string.find(value, ",") then
+						local args = string.Split(value, ",")
+						if args[1] then
+							length = tonumber(args[1])
+						end
+					end
+				end
 
 				if not length or math.floor(length) ~= length then
 					return failcb(string.format("malformed server reply with header content-length (got %q, expected valid integer number)", value), true)

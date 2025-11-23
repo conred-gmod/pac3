@@ -122,7 +122,7 @@ function PART:GetOrFindCachedPart(uid_or_name)
 		self.erroring_cached_parts[uid_or_name] = true
 		self.bad_uid_search = self.bad_uid_search or 0
 		self.bad_uid_search = self.bad_uid_search + 1
-		if self:GetPlayerOwner() == LocalPlayer() then
+		if self:GetPlayerOwner() == LocalPlayer() and not pace.still_loading_wearing then
 			pace.FlashNotification("performance warning! " .. tostring(self) .. " keeps searching for parts not finding anything! " .. tostring(uid_or_name) .. " may be unused!")
 		end
 	else
@@ -281,11 +281,14 @@ end
 
 PART.Inputs = {}
 
-PART.Inputs.property = function(self, property_name, field)
+PART.Inputs.property = function(self, property_name, field, uid)
 
 	local part = self.TargetEntity:IsValid() and self.TargetEntity or self:GetParent()
+	if uid then
+		part = self:GetOrFindCachedPart(uid)
+	end
 
-	if part:IsValid() and part.GetProperty and property_name then
+	if part and part:IsValid() and part.GetProperty and property_name then
 		local v = part:GetProperty(property_name)
 
 		local T = type(v)
@@ -453,16 +456,21 @@ PART.Inputs.sample_and_hold = function(self, seed, duration, min, max, ease)
 
 	self.samplehold = self.samplehold or {}
 	self.samplehold_prev = self.samplehold_prev or {}
+	self.samplehold_duration = self.samplehold_duration or {}
 	self.samplehold_prev[seed] = self.samplehold_prev[seed] or {value = min, refresh = CurTime()}
 	self.samplehold[seed] = self.samplehold[seed] or {value = min + math.random()*(max-min), refresh = CurTime() + duration}
 
+	self.samplehold_duration[seed] = self.samplehold_duration[seed] or CurTime()
+
 	local prev = self.samplehold_prev[seed].value
-	local frac = 1 - (self.samplehold[seed].refresh - CurTime()) / duration
+	local frac = 1 - (self.samplehold[seed].refresh - CurTime()) / self.samplehold_duration[seed]
 	local delta = self.samplehold[seed].value - prev
 
 	if CurTime() > self.samplehold[seed].refresh then
 		self.samplehold_prev[seed] = self.samplehold[seed]
-		self.samplehold[seed] = {value = min + math.random()*(max-min), refresh = CurTime() + duration}
+		self.samplehold_duration[seed] = duration
+		self.samplehold[seed] = {value = min + math.random()*(max-min), refresh = CurTime() + self.samplehold_duration[seed]}
+		
 	end
 	if not ease then
 		return self.samplehold[seed].value
@@ -1640,6 +1648,8 @@ function PART:SetExpression(str, slot)
 		for name, func in pairs(PART.Inputs) do
 			lib[name] = function(...) return func(self, ...) end
 		end
+		--we'll use that in the luapad syntax highlighting
+		self.lib = lib
 
 		local ok, res = pac.CompileExpression(str, lib)
 		if ok then

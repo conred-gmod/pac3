@@ -605,6 +605,9 @@ local function encode_table_to_file(str)
 	elseif str == "eventwheel_colors" then
 		data = pace.command_colors or {}
 		file.Write("pac3_config/" .. str..".txt", util.TableToJSON(data, true))
+	elseif str == "pinned_properties" then
+		data = pace.pinned_properties or {}
+		file.Write("pac3_config/" .. str..".txt", util.TableToJSON(data, true))
 	end
 
 end
@@ -640,6 +643,8 @@ local function decode_table_from_file(str)
 		else
 			pace.command_colors = util.JSONToTable(data)
 		end
+	elseif str == "pinned_properties" then
+		pace.pinned_properties = util.JSONToTable(data, false, true)
 	end
 
 
@@ -1094,6 +1099,7 @@ function pace.FillEditorSettings(pnl)
 	local shortcutaction_choices = vgui.Create("DComboBox", LeftPanel)
 	shortcutaction_choices:SetText("Select a PAC action")
 	shortcutaction_choices:SetSortItems(false)
+	pace.shortcutaction_choices = shortcutaction_choices
 	local function rebuild_shortcut_box()
 		local display, active_action = shortcutaction_choices:GetSelected()
 		local active_action_count = 0
@@ -1654,65 +1660,12 @@ function pace.FillEditorSettings(pnl)
 		end
 	end
 
-	local function FindImage(option_name)
-		if option_name == "save" then
-			return pace.MiscIcons.save
-		elseif option_name == "load" then
-			return pace.MiscIcons.load
-		elseif option_name == "wear" then
-			return pace.MiscIcons.wear
-		elseif option_name == "remove" then
-			return pace.MiscIcons.clear
-		elseif option_name == "copy" then
-			return pace.MiscIcons.copy
-		elseif option_name == "paste" then
-			return pace.MiscIcons.paste
-		elseif option_name == "cut" then
-			return "icon16/cut.png"
-		elseif option_name == "paste_properties" then
-			return pace.MiscIcons.replace
-		elseif option_name == "clone" then
-			return pace.MiscIcons.clone
-		elseif option_name == "partsize_info" then
-			return"icon16/drive.png"
-		elseif option_name == "bulk_apply_properties" then
-			return "icon16/application_form.png"
-		elseif option_name == "bulk_select" then
-			return "icon16/table_multiple.png"
-		elseif option_name == "spacer" then
-			return "icon16/application_split.png"
-		elseif option_name == "hide_editor" then
-			return "icon16/application_delete.png"
-		elseif option_name == "expand_all" then
-			return "icon16/arrow_down.png"
-		elseif option_name == "collapse_all" then
-			return "icon16/arrow_in.png"
-		elseif option_name == "copy_uid" then
-			return pace.MiscIcons.uniqueid
-		elseif option_name == "help_part_info" then
-			return "icon16/information.png"
-		elseif option_name == "reorder_movables" then
-			return "icon16/application_double.png"
-		elseif option_name == "criteria_process" then
-			return "icon16/text_list_numbers.png"
-		elseif option_name == "bulk_morph" then
-			return "icon16/chart_line.png"
-		elseif option_name == "arraying_menu" then
-			return "icon16/shape_group.png"
-		elseif option_name == "view_lockon" then
-			return "icon16/zoom.png"
-		elseif option_name == "view_goto" then
-			return "icon16/arrow_turn_right.png"
-		end
-		return "icon16/world.png"
-	end
-
 	partmenu_choices:SetY(50)
 	partmenu_choices:SetX(10)
 	for i,v in pairs(pace.operations_all_operations) do
 		local pnl = vgui.Create("DButton", f)
 		pnl:SetText(string.Replace(string.upper(v),"_"," "))
-		pnl:SetImage(FindImage(v))
+		pnl:SetImage(pace.GetPartMenuOptionImage(v))
 		pnl:SetTooltip("Left click to add at the end\nRight click to insert at the beginning")
 
 		function pnl:DoClick()
@@ -2554,6 +2507,19 @@ end
 decode_table_from_file("pac_editor_shortcuts")
 decode_table_from_file("pac_editor_partmenu_layouts")
 decode_table_from_file("eventwheel_colors")
+decode_table_from_file("pinned_properties")
+if not pace.pinned_properties then
+	pace.pinned_properties = {
+		"Name",
+		"Hide",
+		"Bone", "Position", "Angles",
+		"Notes"
+	}
+end
+
+function pac.UpdateConfigFile(str)
+	encode_table_to_file(str)
+end
 
 if not file.Exists("pac_part_categories_experimental.txt", "DATA") then
 	file.Write("pac3_config/pac_part_categories_experimental.txt", util.TableToKeyValues(pace.partmenu_categories_experimental))

@@ -16,6 +16,7 @@ local physics_point_ent_classes = {
 	["physics_cannister"] = true,
 	["npc_satchel"] = true,
 	["npc_grenade_frag"] = true,
+	["pac_projectile"] = true,
 }
 
 local convar_lock = GetConVar("pac_sv_lock")
@@ -478,6 +479,7 @@ function PART:reset_ent_ang()
 end
 
 function PART:OnRemove()
+	pac.InsertSpecialTrackedPart(self:GetPlayerOwner(), self, true)
 end
 
 function PART:DecideTarget()
@@ -518,10 +520,10 @@ function PART:DecideTarget()
 							chosen_ent = ent_candidate
 							table.insert(ents_candidates, ent_candidate)
 						end
-					elseif self.PhysicsProps and (physics_point_ent_classes[ent_candidate:GetClass()] or string.find(ent_candidate:GetClass(),"item_") or string.find(ent_candidate:GetClass(),"ammo_")) then
+					elseif self.PhysicsProps and (ent_candidate ~= self:GetRootPart():GetOwner()) and (physics_point_ent_classes[ent_candidate:GetClass()] or string.find(ent_candidate:GetClass(),"item_") or string.find(ent_candidate:GetClass(),"ammo_")) then
 						chosen_ent = ent_candidate
 						table.insert(ents_candidates, ent_candidate)
-					elseif self.NPC and (ent_candidate:IsNPC() or ent_candidate:IsNextBot() or ent_candidate.IsDrGEntity or ent_candidate.IsVJBaseSNPC) then
+					elseif self.NPC and (ent_candidate ~= self:GetRootPart():GetOwner()) and (ent_candidate:IsNPC() or ent_candidate:IsNextBot() or ent_candidate.IsDrGEntity or ent_candidate.IsVJBaseSNPC) then
 						chosen_ent = ent_candidate
 						table.insert(ents_candidates, ent_candidate)
 					end
@@ -595,6 +597,7 @@ function PART:Initialize()
 		end
 	end
 	if not convar_lock:GetBool() then self:SetError("lock parts are disabled on this server!") end
+	pac.InsertSpecialTrackedPart(self:GetPlayerOwner(), self)
 end
 
 
